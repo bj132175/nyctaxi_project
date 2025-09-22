@@ -5,7 +5,7 @@ def get_target_yyyymm(months_ago=2):
     '''
     Returns the year-month (yyyy-MM) for the given number of months ago
     '''
-    target_date = date.today() + relativedelta(months=months_ago)
+    target_date = date.today() - relativedelta(months=months_ago)
     return target_date.strftime('%Y-%m')
 
 def get_month_start_n_months_ago(months_ago=2) -> date:
