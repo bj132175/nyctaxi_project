@@ -1,0 +1,164 @@
+{
+  "name": "nyctaxi_job",
+  "email_notifications": {
+    "no_alert_for_skipped_runs": false
+  },
+  "webhook_notifications": {},
+  "timeout_seconds": 0,
+  "max_concurrent_runs": 1,
+  "tasks": [
+    {
+      "task_key": "ingest_lookup",
+      "run_if": "ALL_SUCCESS",
+      "notebook_task": {
+        "notebook_path": "transformations/notebooks/00_landing/ingest_lookup",
+        "source": "GIT"
+      },
+      "timeout_seconds": 0,
+      "email_notifications": {},
+      "webhook_notifications": {}
+    },
+    {
+      "task_key": "continue_downstream_lookup",
+      "depends_on": [
+        {
+          "task_key": "ingest_lookup"
+        }
+      ],
+      "run_if": "ALL_SUCCESS",
+      "condition_task": {
+        "op": "EQUAL_TO",
+        "left": "{{tasks.ingest_lookup.values.continue_downstream}}",
+        "right": "yes"
+      },
+      "timeout_seconds": 0,
+      "email_notifications": {},
+      "webhook_notifications": {}
+    },
+    {
+      "task_key": "taxi_zone_lookup",
+      "depends_on": [
+        {
+          "task_key": "continue_downstream_lookup",
+          "outcome": "true"
+        }
+      ],
+      "run_if": "ALL_SUCCESS",
+      "notebook_task": {
+        "notebook_path": "transformations/notebooks/02_silver/taxi_zone_lookup",
+        "source": "GIT"
+      },
+      "timeout_seconds": 0,
+      "email_notifications": {},
+      "webhook_notifications": {}
+    },
+    {
+      "task_key": "ingest_yellow_trips",
+      "run_if": "ALL_SUCCESS",
+      "notebook_task": {
+        "notebook_path": "transformations/notebooks/00_landing/ingest_yellow_trips",
+        "source": "GIT"
+      },
+      "timeout_seconds": 0,
+      "email_notifications": {},
+      "webhook_notifications": {}
+    },
+    {
+      "task_key": "continue_downstream_yellow_trips",
+      "depends_on": [
+        {
+          "task_key": "ingest_yellow_trips"
+        }
+      ],
+      "run_if": "ALL_SUCCESS",
+      "condition_task": {
+        "op": "EQUAL_TO",
+        "left": "{{tasks.ingest_yellow_trips.values.continue_downstream}}",
+        "right": "yes"
+      },
+      "timeout_seconds": 0,
+      "email_notifications": {},
+      "webhook_notifications": {}
+    },
+    {
+      "task_key": "yellow_trips_raw",
+      "depends_on": [
+        {
+          "task_key": "continue_downstream_yellow_trips",
+          "outcome": "true"
+        }
+      ],
+      "run_if": "ALL_SUCCESS",
+      "notebook_task": {
+        "notebook_path": "transformations/notebooks/01_bronze/yellow_trips_raw",
+        "source": "GIT"
+      },
+      "timeout_seconds": 0,
+      "email_notifications": {},
+      "webhook_notifications": {}
+    },
+    {
+      "task_key": "yellow_trips_cleansed",
+      "depends_on": [
+        {
+          "task_key": "yellow_trips_raw"
+        }
+      ],
+      "run_if": "ALL_SUCCESS",
+      "notebook_task": {
+        "notebook_path": "transformations/notebooks/02_silver/yellow_trips_cleansed",
+        "source": "GIT"
+      },
+      "timeout_seconds": 0,
+      "email_notifications": {},
+      "webhook_notifications": {}
+    },
+    {
+      "task_key": "yellow_trips_enriched",
+      "depends_on": [
+        {
+          "task_key": "taxi_zone_lookup"
+        },
+        {
+          "task_key": "yellow_trips_cleansed"
+        }
+      ],
+      "run_if": "ALL_SUCCESS",
+      "notebook_task": {
+        "notebook_path": "transformations/notebooks/02_silver/yellow_trips_enriched",
+        "source": "GIT"
+      },
+      "timeout_seconds": 0,
+      "email_notifications": {},
+      "webhook_notifications": {}
+    },
+    {
+      "task_key": "daily_trip_summary",
+      "depends_on": [
+        {
+          "task_key": "yellow_trips_enriched"
+        }
+      ],
+      "run_if": "ALL_SUCCESS",
+      "notebook_task": {
+        "notebook_path": "transformations/notebooks/03_gold/daily_trip_summary",
+        "source": "GIT"
+      },
+      "timeout_seconds": 0,
+      "email_notifications": {},
+      "webhook_notifications": {}
+    }
+  ],
+  "git_source": {
+    "git_url": "https://github.com/bj132175/nyctaxi_project.git",
+    "git_provider": "gitHub",
+    "git_branch": "main"
+  },
+  "queue": {
+    "enabled": true
+  },
+  "performance_target": "PERFORMANCE_OPTIMIZED",
+  "run_as": {
+    "user_name": "bj132175@student.sgh.waw.pl"
+  }
+}
